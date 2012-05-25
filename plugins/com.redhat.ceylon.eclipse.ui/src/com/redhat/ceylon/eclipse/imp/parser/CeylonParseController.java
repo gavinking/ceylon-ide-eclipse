@@ -377,6 +377,7 @@ public class CeylonParseController extends ParseControllerBase {
             cu = builtPhasedUnit.getCompilationUnit();
             fCurrentAst = cu;
             phasedUnit = builtPhasedUnit;
+
             // the type checker doesn't run all phases
             // on external modules, so we need to run
             // type analysis here the first time we
@@ -385,6 +386,11 @@ public class CeylonParseController extends ParseControllerBase {
                 phasedUnit.validateRefinement();
                 phasedUnit.analyseTypes();
             }
+            
+            /*phasedUnit.scanDeclarations();
+            phasedUnit.scanTypeDeclarations();
+            phasedUnit.validateRefinement();
+            phasedUnit.analyseTypes();*/
         }
         else {
             Package pkg = null;
