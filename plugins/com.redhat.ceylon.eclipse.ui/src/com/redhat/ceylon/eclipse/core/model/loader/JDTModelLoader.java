@@ -518,19 +518,23 @@ public class JDTModelLoader extends AbstractModelLoader {
     }
     
     private Set<String> sourceDeclarations = new TreeSet<String>();
-    public void setupSourceFileObjects(List<PhasedUnit> phasedUnits) {
-        for (PhasedUnit unit : phasedUnits) {
-            final String pkgName = unit.getPackage().getQualifiedNameString();
-            unit.getCompilationUnit().visit(new SourceDeclarationVisitor(){
-                @Override
-                public void loadFromSource(Tree.Declaration decl) {
-                    String name = Util.quoteIfJavaKeyword(decl.getIdentifier().getText());
-                    String fqn = pkgName.isEmpty() ? name : pkgName+"."+name;
-                        sourceDeclarations.add(fqn);
-                }
-            });
+    public void setupSourceFileObjects(List<?> treeHolders) {
+        for (Object unitObject : treeHolders) {
+            if (unitObject instanceof PhasedUnit) {
+                final PhasedUnit unit = (PhasedUnit) unitObject;
+                final String pkgName = unit.getPackage().getQualifiedNameString();
+                unit.getCompilationUnit().visit(new SourceDeclarationVisitor(){
+                    @Override
+                    public void loadFromSource(Tree.Declaration decl) {
+                        String name = Util.quoteIfJavaKeyword(decl.getIdentifier().getText());
+                        String fqn = pkgName.isEmpty() ? name : pkgName+"."+name;
+                            sourceDeclarations.add(fqn);
+                    }
+                });
+            }
         }
     }
+
 
     public void clearCachesOnPackage(String packageName) {
         List<String> keysToRemove = new ArrayList<String>(classMirrorCache.size());
