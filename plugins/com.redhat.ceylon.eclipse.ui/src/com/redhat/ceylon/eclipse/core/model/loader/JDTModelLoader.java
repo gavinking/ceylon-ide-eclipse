@@ -384,19 +384,25 @@ public class JDTModelLoader extends AbstractModelLoader {
                 return null;
             }
             
-            
             LookupEnvironment theLookupEnvironment = getLookupEnvironment();
             if (type.isBinary()) {
-                if (type.getResource()!=null &&
+                /*if (type.getResource()!=null &&
                         //TODO: this is a crazy hack to avoid loading Ceylon
                         //      classes from the JDTClasses directory that
                         //      works on my machine
                         type.getResource().toString().contains("L/.org.eclipse.jdt.core.external.folders/.link")) {
                     return null;
-                }
+                }*/
                 ClassFile classFile = (ClassFile) type.getClassFile();
                 
                 if (classFile != null) {
+                    IPackageFragmentRoot fragmentRoot = classFile.getPackageFragmentRoot();
+                    if (fragmentRoot != null) {
+                        if (fragmentRoot.getPath().toFile().equals(CeylonBuilder.getCeylonOutputDirectory(javaProject))) {
+                            return null;
+                        }
+                    }
+
                     IBinaryType binaryType = classFile.getBinaryTypeInfo((IFile) classFile.getCorrespondingResource(), true);
                     BinaryTypeBinding binaryTypeBinding = theLookupEnvironment.cacheBinaryType(binaryType, null);
                     if (binaryTypeBinding == null) {
