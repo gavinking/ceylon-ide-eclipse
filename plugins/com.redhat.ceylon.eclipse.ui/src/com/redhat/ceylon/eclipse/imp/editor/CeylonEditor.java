@@ -23,6 +23,7 @@ import org.eclipse.imp.editor.OutlineLabelProvider;
 import org.eclipse.imp.editor.ParserScheduler;
 import org.eclipse.imp.editor.StructuredSourceViewerConfiguration;
 import org.eclipse.imp.editor.UniversalEditor;
+import org.eclipse.imp.language.Language;
 import org.eclipse.imp.parser.IMessageHandler;
 import org.eclipse.imp.parser.IParseController;
 import org.eclipse.imp.services.base.TreeModelBuilderBase;
@@ -45,6 +46,7 @@ import org.eclipse.jface.text.information.InformationPresenter;
 import org.eclipse.jface.text.link.LinkedModeModel;
 import org.eclipse.jface.text.link.LinkedPosition;
 import org.eclipse.jface.text.source.ISourceViewer;
+import org.eclipse.jface.text.source.SourceViewerConfiguration;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.TreeViewer;
@@ -125,7 +127,81 @@ public class CeylonEditor extends UniversalEditor {
     
     private static final TreeModelBuilderBase builder = new CeylonTreeModelBuilder();
 
-    private class OutlineInformationProvider implements IInformationProvider, IInformationProviderExtension {
+    private static final class CeylonResourceChangeListener implements
+            IResourceChangeListener {
+        CeylonEditor editor;
+        CeylonResourceChangeListener(CeylonEditor editor) {
+            this.editor=editor;
+        }
+        public void resourceChanged(IResourceChangeEvent event) {
+            if (event.getType() != IResourceChangeEvent.POST_BUILD)
+                return;
+            if (event.getBuildKind() != IncrementalProjectBuilder.AUTO_BUILD)
+                return;
+            
+            IParseController pc= editor.getParseController();
+            if (pc == null) {
+                return;
+            }
+            IPath oldWSRelPath= pc.getProject().getRawProject().getFullPath().append(pc.getPath());
+            IResourceDelta rd= event.getDelta().findMember(oldWSRelPath);
+
+            if (rd != null) {
+                editor.scheduleParsing();
+            }
+        }
+    }
+
+    private static final class CeylonInformationControlCreator implements
+            IInformationControlCreator {
+        private final Language lang;
+        
+        private CeylonInformationControlCreator(Language lang) {
+            this.lang = lang;
+        }
+
+        @Override
+        public IInformationControl createInformationControl(Shell parent) {
+            return new OutlineInformationControl(parent, SWT.RESIZE, SWT.V_SCROLL | SWT.H_SCROLL, SHOW_OUTLINE, lang) {
+                @Override
+                protected TreeViewer createTreeViewer(Composite parent, int style) {
+                    TreeViewer tv = super.createTreeViewer(parent, style);
+                    try {
+                        OutlineLabelProvider lp = (OutlineLabelProvider) labelProviderField.get(this);
+                        lp.addLabelDecorator(new CeylonLabelDecorator(lang));
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    return tv;
+                }
+                @Override
+                protected String getStatusFieldText() {
+                    return "";
+                }
+            };
+        }
+    }
+
+    private static final class CeylonStructuredSourceViewerConfiguration 
+            extends StructuredSourceViewerConfiguration 
+            implements IInformationProvider, IInformationProviderExtension {
+        private CeylonStructuredSourceViewerConfiguration(IPreferenceStore prefStore, UniversalEditor editor) {
+            super(prefStore, editor);
+        }
+
+        @Override
+        public IInformationPresenter getOutlinePresenter(ISourceViewer sourceViewer) {
+            InformationPresenter presenter = new InformationPresenter(new CeylonInformationControlCreator(fEditor.getLanguage()));
+            presenter.setDocumentPartitioning(getConfiguredDocumentPartitioning(sourceViewer));
+            presenter.setAnchor(AbstractInformationControlManager.ANCHOR_GLOBAL);
+            presenter.setInformationProvider(this, IDocument.DEFAULT_CONTENT_TYPE);
+            // TODO Should associate all other partition types with this provider, too
+            //presenter.setSizeConstraints(50, 20, true, false);
+            //presenter.setRestoreInformationControlBounds(getSettings("outline_presenter_bounds"), true, true);
+            return presenter;
+        }
+
         public IRegion getSubject(ITextViewer textViewer, int offset) {
             return new Region(offset, 0); // Could be anything, since it's ignored below in getInformation2()...
         }
@@ -134,37 +210,28 @@ public class CeylonEditor extends UniversalEditor {
             throw new UnsupportedOperationException();
         }
         public Object getInformation2(ITextViewer textViewer, IRegion subject) {
-            return builder.buildTree(getParseController().getCurrentAst());
+            return builder.buildTree(getLanguageServiceManager().getParseController().getCurrentAst());
+        }
+
+        @Override
+        public int getTabWidth(ISourceViewer sourceViewer) {
+            return ((CeylonEditor)fEditor).getPreferenceStore().getInt(EDITOR_TAB_WIDTH);
+        }
+        
+        @Override
+        public IHyperlinkDetector[] getHyperlinkDetectors(
+                ISourceViewer sourceViewer) {
+            IHyperlinkDetector[] detectors = super.getHyperlinkDetectors(sourceViewer);
+            IHyperlinkDetector[] result = new IHyperlinkDetector[detectors.length+1];
+            for (int i=0; i<detectors.length; i++) {
+                result[i]=detectors[i];
+            }
+            result[detectors.length] = new JavaReferenceResolver((CeylonEditor)fEditor);
+            return result;
         }
     }
 
     private IResourceChangeListener fResourceListener;
-
-    private IInformationControlCreator getOutlinePresenterControlCreator(ISourceViewer sourceViewer, final String commandId) {
-        return new IInformationControlCreator() {
-            @Override
-            public IInformationControl createInformationControl(Shell parent) {
-                return new OutlineInformationControl(parent, SWT.RESIZE, SWT.V_SCROLL | SWT.H_SCROLL, commandId, getLanguage()) {
-                    @Override
-                    protected TreeViewer createTreeViewer(Composite parent, int style) {
-                        TreeViewer tv = super.createTreeViewer(parent, style);
-                        try {
-                            OutlineLabelProvider lp = (OutlineLabelProvider) labelProviderField.get(this);
-                            lp.addLabelDecorator(new CeylonLabelDecorator(getLanguage()));
-                        }
-                        catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                        return tv;
-                    }
-                    @Override
-                    protected String getStatusFieldText() {
-                        return "";
-                    }
-                };
-            }
-        };
-    }
 
     private IPropertyChangeListener colorChangeListener = new IPropertyChangeListener() {
         @Override
@@ -187,34 +254,7 @@ public class CeylonEditor extends UniversalEditor {
     
     @Override
     protected StructuredSourceViewerConfiguration createSourceViewerConfiguration() {
-        return new StructuredSourceViewerConfiguration(getPreferenceStore(), this) {
-            @Override
-            public IInformationPresenter getOutlinePresenter(ISourceViewer sourceViewer) {
-                InformationPresenter presenter = new InformationPresenter(getOutlinePresenterControlCreator(sourceViewer, SHOW_OUTLINE));
-                presenter.setDocumentPartitioning(getConfiguredDocumentPartitioning(sourceViewer));
-                presenter.setAnchor(AbstractInformationControlManager.ANCHOR_GLOBAL);
-                presenter.setInformationProvider(new OutlineInformationProvider(), IDocument.DEFAULT_CONTENT_TYPE);
-                // TODO Should associate all other partition types with this provider, too
-                //presenter.setSizeConstraints(50, 20, true, false);
-                //presenter.setRestoreInformationControlBounds(getSettings("outline_presenter_bounds"), true, true);
-                return presenter;
-            }
-            @Override
-            public int getTabWidth(ISourceViewer sourceViewer) {
-                return getPreferenceStore().getInt(EDITOR_TAB_WIDTH);
-            }
-            @Override
-            public IHyperlinkDetector[] getHyperlinkDetectors(
-                    ISourceViewer sourceViewer) {
-                IHyperlinkDetector[] detectors = super.getHyperlinkDetectors(sourceViewer);
-                IHyperlinkDetector[] result = new IHyperlinkDetector[detectors.length+1];
-                for (int i=0; i<detectors.length; i++) {
-                    result[i]=detectors[i];
-                }
-                result[detectors.length] = new JavaReferenceResolver(CeylonEditor.this);
-                return result;
-            }
-        };
+        return new CeylonStructuredSourceViewerConfiguration(getPreferenceStore(), this);
     }
         
     /*private IDialogSettings getSettings(String sectionName) {
@@ -297,33 +337,18 @@ public class CeylonEditor extends UniversalEditor {
             return;
         }
         
-        ResourcesPlugin.getWorkspace().addResourceChangeListener(fResourceListener= new IResourceChangeListener() {
-            public void resourceChanged(IResourceChangeEvent event) {
-                if (event.getType() != IResourceChangeEvent.POST_BUILD)
-                    return;
-                if (event.getBuildKind() != IncrementalProjectBuilder.AUTO_BUILD)
-                    return;
-                
-                IParseController pc= fLanguageServiceManager.getParseController();
-                if (pc == null) {
-                    return;
-                }
-                IPath oldWSRelPath= pc.getProject().getRawProject().getFullPath().append(pc.getPath());
-                IResourceDelta rd= event.getDelta().findMember(oldWSRelPath);
-
-                if (rd != null) {
-                    scheduleParsing();
-                }
-            }
-        }, IResourceChangeEvent.POST_BUILD);
+        fResourceListener= new CeylonResourceChangeListener(this);
+        ResourcesPlugin.getWorkspace().addResourceChangeListener(fResourceListener, 
+                IResourceChangeEvent.POST_BUILD);
     }
     
     public void scheduleParsing() {
         try {
             ParserScheduler scheduler = (ParserScheduler) fParserSchedulerField.get(CeylonEditor.this);
             if (scheduler != null) {
+                scheduler.setPriority(ParserScheduler.INTERACTIVE);
                 scheduler.cancel();
-                scheduler.schedule(50);
+                scheduler.schedule(10);
             }
         } catch (IllegalArgumentException e) {
             // TODO Auto-generated catch block
@@ -334,7 +359,7 @@ public class CeylonEditor extends UniversalEditor {
         }
     }
 
-    class CeylonGenerateActionGroup extends GenerateActionGroup {
+    static class CeylonGenerateActionGroup extends GenerateActionGroup {
         public CeylonGenerateActionGroup(UniversalEditor editor) {
             super(editor, "");
         }
@@ -342,7 +367,7 @@ public class CeylonEditor extends UniversalEditor {
         public void fillContextMenu(IMenuManager menu) {}
     }
     
-    class CeylonOpenEditorActionGroup extends OpenEditorActionGroup {
+    static class CeylonOpenEditorActionGroup extends OpenEditorActionGroup {
         public CeylonOpenEditorActionGroup(UniversalEditor editor) {
             super(editor);
         }
@@ -720,6 +745,7 @@ public class CeylonEditor extends UniversalEditor {
     }
 
     public void dispose() {
+        getParseController().dispose();
         super.dispose();
         if (fResourceListener != null) {
             ResourcesPlugin.getWorkspace().removeResourceChangeListener(fResourceListener);
@@ -727,5 +753,6 @@ public class CeylonEditor extends UniversalEditor {
         //CeylonPlugin.getInstance().getPreferenceStore().removePropertyChangeListener(colorChangeListener);
         currentTheme.getColorRegistry().removeListener(colorChangeListener);
         currentTheme.getFontRegistry().removeListener(fontChangeListener);
+        setSourceViewerConfiguration(new SourceViewerConfiguration());
     }
 }

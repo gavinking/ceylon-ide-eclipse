@@ -90,6 +90,14 @@ public class CeylonParseController extends ParseControllerBase {
         simpleAnnotationTypeInfo.addProblemMarkerType(CeylonBuilder.PROBLEM_MARKER_ID);
     }
     
+    public void dispose() {
+        fCurrentAst=null;
+        modelLoader=null;
+        typeChecker=null;
+        tokens=null;
+        sourcePositionLocator=null;
+    }
+    
     public CeylonSourcePositionLocator getSourcePositionLocator() {
         if (sourcePositionLocator == null) {
             sourcePositionLocator= new CeylonSourcePositionLocator(this);

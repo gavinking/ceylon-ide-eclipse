@@ -513,9 +513,7 @@ public class CeylonBuilder extends IncrementalProjectBuilder{
                                 currentFileTypeChecker = getProjectTypeChecker(currentFileProject);
                             }
                             
-                            Set<PhasedUnit> phasedUnitsDependingOn = Collections.emptySet();
-                            
-                            phasedUnitsDependingOn = getDependentsOf(srcFile,
+                            Set<PhasedUnit> phasedUnitsDependingOn = getDependentsOf(srcFile,
                                     currentFileTypeChecker, currentFileProject);
     
                             for(PhasedUnit dependingPhasedUnit : phasedUnitsDependingOn ) {
@@ -769,12 +767,12 @@ public class CeylonBuilder extends IncrementalProjectBuilder{
         if(LANGUAGE.hasExtension(srcFile.getRawLocation().getFileExtension())) {
             PhasedUnit phasedUnit = currentFileTypeChecker.getPhasedUnits().getPhasedUnit(ResourceVirtualFile.createResourceVirtualFile(srcFile));
             if (phasedUnit != null) {
-                return phasedUnit.getDependentsOf();
+                return phasedUnit.getDependentsOf().keySet();
             }
         } else {
             Unit unit = getJavaUnit(currentFileProject, srcFile);
             if (unit instanceof ExternalUnit) {
-                return ((ExternalUnit)unit).getDependentsOf();
+                return ((ExternalUnit)unit).getDependentsOf().keySet();
             }
         }
         
@@ -862,7 +860,6 @@ public class CeylonBuilder extends IncrementalProjectBuilder{
         }
         parserErrors.clear();
         
-        
         PhasedUnit newPhasedUnit = new CeylonSourceFile(file, srcDir, cu, pkg, 
                 moduleManager, typeChecker, tokens);
         
@@ -905,7 +902,7 @@ public class CeylonBuilder extends IncrementalProjectBuilder{
             PhasedUnit alreadyBuiltPhasedUnit = typeChecker.getPhasedUnits().getPhasedUnit(file);
 
             Package pkg = null;
-            Set<PhasedUnit> dependentsOf = Collections.emptySet();
+            Map<PhasedUnit,Boolean> dependentsOf = Collections.emptyMap();
             if (alreadyBuiltPhasedUnit!=null) {
                 // Editing an already built file
                 pkg = alreadyBuiltPhasedUnit.getPackage();
@@ -919,7 +916,7 @@ public class CeylonBuilder extends IncrementalProjectBuilder{
                 }
             }
             PhasedUnit newPhasedUnit = parseFileToPhasedUnit(moduleManager, typeChecker, file, srcDir, pkg);
-            newPhasedUnit.getDependentsOf().addAll(dependentsOf);
+            newPhasedUnit.getDependentsOf().putAll(dependentsOf);
             phasedUnitsToUpdate.add(newPhasedUnit);
             
         }
