@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.jdt.core.IClassFile;
@@ -86,7 +85,6 @@ import com.redhat.ceylon.compiler.typechecker.context.PhasedUnit;
 import com.redhat.ceylon.compiler.typechecker.model.Class;
 import com.redhat.ceylon.compiler.typechecker.model.Declaration;
 import com.redhat.ceylon.compiler.typechecker.model.ExternalUnit;
-import com.redhat.ceylon.compiler.typechecker.model.Interface;
 import com.redhat.ceylon.compiler.typechecker.model.Module;
 import com.redhat.ceylon.compiler.typechecker.model.Modules;
 import com.redhat.ceylon.compiler.typechecker.model.Package;
@@ -389,6 +387,13 @@ public class JDTModelLoader extends AbstractModelLoader {
             
             LookupEnvironment theLookupEnvironment = getLookupEnvironment();
             if (type.isBinary()) {
+                if (type.getResource()!=null &&
+                        //TODO: this is a crazy hack to avoid loading Ceylon
+                        //      classes from the JDTClasses directory that
+                        //      works on my machine
+                        type.getResource().toString().contains("L/.org.eclipse.jdt.core.external.folders/.link")) {
+                    return null;
+                }
                 ClassFile classFile = (ClassFile) type.getClassFile();
                 
                 if (classFile != null) {
