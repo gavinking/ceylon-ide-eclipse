@@ -873,7 +873,7 @@ public class CeylonBuilder extends IncrementalProjectBuilder{
         JDTModelLoader modelLoader = getProjectModelLoader(project);
         Set<String> cleanedPackages = new HashSet<String>();
         
-        List<PhasedUnit> phasedUnitsToUpdate = new ArrayList<PhasedUnit>();
+        List<PhasedUnit> phasedUnitsToUpdate = new ArrayList<PhasedUnit>();        
         for (IFile fileToUpdate : fSourcesToCompile) {
             if (monitor.isCanceled()) {
                 throw new OperationCanceledException();
@@ -936,6 +936,9 @@ public class CeylonBuilder extends IncrementalProjectBuilder{
             }
             typeChecker.getPhasedUnits().addPhasedUnit(phasedUnit.getUnitFile(), phasedUnit);
         }
+        
+        modelLoader.setupSourceFileObjects(phasedUnitsToUpdate);
+        
         if (monitor.isCanceled()) {
             throw new OperationCanceledException();
         }
