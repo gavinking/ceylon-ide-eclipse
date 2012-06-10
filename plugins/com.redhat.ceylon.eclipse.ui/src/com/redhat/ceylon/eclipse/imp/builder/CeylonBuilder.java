@@ -421,7 +421,7 @@ public class CeylonBuilder extends IncrementalProjectBuilder{
                     throw new OperationCanceledException();
                 }
                 final List<IFile> allSources = getProjectSources(project);
-                getConsoleStream().println("compiling: " + allSources);
+                getConsoleStream().println("             ...compiling " + allSources.size() + " source files...");
                 binariesGenerationOK = generateBinaries(project, sourceProject, allSources, monitor);
                 monitor.worked(1);
                 getConsoleStream().println(successMessage(binariesGenerationOK));
@@ -639,7 +639,7 @@ public class CeylonBuilder extends IncrementalProjectBuilder{
                 monitor.worked(1);
                 monitor.subTask("Generating binaries");
                 getConsoleStream().println(timedMessage("Incremental generation of class files..."));
-                getConsoleStream().println("compiling: " + fSourcesToCompile);
+                getConsoleStream().println("             ...compiling " + fSourcesToCompile.size() + " source files...");
                 binariesGenerationOK = generateBinaries(project, sourceProject, fSourcesToCompile, monitor);
                 if (monitor.isCanceled()) {
                     throw new OperationCanceledException();
