@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.antlr.runtime.CommonToken;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.imp.editor.EditorUtility;
@@ -19,6 +20,7 @@ import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.PartInitException;
 
 import com.redhat.ceylon.compiler.typechecker.TypeChecker;
+import com.redhat.ceylon.compiler.typechecker.model.Unit;
 import com.redhat.ceylon.compiler.typechecker.tree.Node;
 import com.redhat.ceylon.compiler.typechecker.tree.Tree;
 import com.redhat.ceylon.eclipse.code.editor.CeylonEditor;
@@ -213,6 +215,10 @@ public class CeylonSourcePositionLocator implements ISourcePositionLocator {
             Integer index = in.getStopIndex();
             return index==null?0:index;
         }
+    }
+    
+    public static boolean belongsToProject(Unit u, IProject p) {
+    	return p.getLocation().isPrefixOf(new Path(u.getFullPath()));
     }
     
     public static IPath getNodePath(Object entity, TypeChecker typeChecker) {
