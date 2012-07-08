@@ -19,7 +19,6 @@ import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.PartInitException;
 
 import com.redhat.ceylon.compiler.typechecker.TypeChecker;
-import com.redhat.ceylon.compiler.typechecker.model.Unit;
 import com.redhat.ceylon.compiler.typechecker.tree.Node;
 import com.redhat.ceylon.compiler.typechecker.tree.Tree;
 import com.redhat.ceylon.eclipse.code.editor.CeylonEditor;
@@ -219,8 +218,7 @@ public class CeylonSourcePositionLocator implements ISourcePositionLocator {
     public static IPath getNodePath(Object entity, TypeChecker typeChecker) {
         if (entity instanceof Node) {
             Node node= (Node) entity;
-            Unit unit = node.getUnit();
-            return new Path(unit.getFullPath());
+            return new Path(node.getUnit().getFullPath());
         }
         if (entity instanceof ICompilationUnit) {
             return ((ICompilationUnit) entity).getPath();
