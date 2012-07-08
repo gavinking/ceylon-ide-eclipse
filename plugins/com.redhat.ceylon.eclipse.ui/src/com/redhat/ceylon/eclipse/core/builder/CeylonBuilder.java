@@ -1993,6 +1993,9 @@ public class CeylonBuilder extends IncrementalProjectBuilder{
     }
 
 	private static Map getBuilderArgs(IProject project) {
+		if (project==null) {
+			return Collections.EMPTY_MAP;
+		}
     	try {
 			for (ICommand c: project.getDescription().getBuildSpec()) {
 				if (c.getBuilderName().equals(BUILDER_ID)) {

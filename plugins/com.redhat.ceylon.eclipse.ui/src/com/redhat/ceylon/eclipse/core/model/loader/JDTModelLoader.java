@@ -526,6 +526,8 @@ public class JDTModelLoader extends AbstractModelLoader {
         }
         unit = new ExternalUnit();
         unit.setFilename(jdtClass.getFileName());
+        unit.setFullPath(jdtClass.getPath());
+        unit.setRelativePath(jdtClass.getQualifiedName().replace('.', '/'));
         unit.setPackage(pkg);
         return unit;
     }

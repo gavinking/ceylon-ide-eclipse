@@ -51,7 +51,7 @@ public abstract class ResourceVirtualFile implements VirtualFile {
 
     @Override
     public String getPath() {
-        return path.toString();
+        return project.getLocation().append(path).toString();
     }
 
     /**

@@ -227,6 +227,10 @@ public class JDTClass implements ClassMirror {
 
         return new String(CharOperation.subarray(fileName, start, -1));
     }
+    
+    public String getPath() {
+    	return new String(klass.getFileName());
+    }
 
     public boolean isBinary() {
         return klass.isBinaryBinding();

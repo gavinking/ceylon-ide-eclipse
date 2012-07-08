@@ -1,15 +1,10 @@
 package com.redhat.ceylon.eclipse.code.parse;
 
-import static com.redhat.ceylon.eclipse.core.builder.CeylonBuilder.getProjectTypeChecker;
-import static com.redhat.ceylon.eclipse.core.builder.CeylonBuilder.getProjects;
-import static com.redhat.ceylon.eclipse.core.builder.CeylonBuilder.getRequiredProjects;
-
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
 import org.antlr.runtime.CommonToken;
-import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.imp.editor.EditorUtility;
@@ -24,15 +19,11 @@ import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.PartInitException;
 
 import com.redhat.ceylon.compiler.typechecker.TypeChecker;
-import com.redhat.ceylon.compiler.typechecker.context.PhasedUnit;
-import com.redhat.ceylon.compiler.typechecker.io.VirtualFile;
-import com.redhat.ceylon.compiler.typechecker.io.impl.ZipFileVirtualFile;
 import com.redhat.ceylon.compiler.typechecker.model.Unit;
 import com.redhat.ceylon.compiler.typechecker.tree.Node;
 import com.redhat.ceylon.compiler.typechecker.tree.Tree;
 import com.redhat.ceylon.eclipse.code.editor.CeylonEditor;
 import com.redhat.ceylon.eclipse.code.editor.Util;
-import com.redhat.ceylon.eclipse.core.vfs.IFileVirtualFile;
 import com.redhat.ceylon.eclipse.ui.CeylonPlugin;
 
 /**
@@ -229,53 +220,7 @@ public class CeylonSourcePositionLocator implements ISourcePositionLocator {
         if (entity instanceof Node) {
             Node node= (Node) entity;
             Unit unit = node.getUnit();
-            String fileName = unit.getFilename();
-            String packagePath = unit.getPackage().getQualifiedNameString().replace('.', '/');
-            String fileRelativePath = packagePath + "/" + fileName;
-            
-            //TODO: all of the following would be totally unnecessary 
-            //      if the typechecker exposed the full path of
-            //      the Unit!
-
-            PhasedUnit phasedUnit = typeChecker==null ? 
-                    null : typeChecker.getPhasedUnitFromRelativePath(fileRelativePath);
-
-            if (phasedUnit == null || (phasedUnit != null && (phasedUnit.getSrcDir() instanceof ZipFileVirtualFile))) {
-                IProject currentProject = null;
-                for (IProject project : getProjects()) {
-                    TypeChecker alternateTypeChecker = getProjectTypeChecker(project);
-                    if (alternateTypeChecker == typeChecker) {
-                        currentProject = project;
-                        break;
-                    }
-                }
-                
-                if (currentProject != null) {
-                    List<IProject> requiredProjects;
-                    requiredProjects = getRequiredProjects(currentProject);
-                    for (IProject requiredProject : requiredProjects) {
-                        TypeChecker requiredProjectTypeChecker = getProjectTypeChecker(requiredProject);
-                        if (requiredProjectTypeChecker == null) {
-                            continue;
-                        }
-                        PhasedUnit requiredProjectPhasedUnit = requiredProjectTypeChecker.getPhasedUnitFromRelativePath(fileRelativePath);
-                        if (requiredProjectPhasedUnit != null && requiredProjectPhasedUnit.isFullyTyped()) {
-                            phasedUnit = requiredProjectPhasedUnit;
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            if (phasedUnit != null) {
-                VirtualFile unitFile = phasedUnit.getUnitFile();
-                if (unitFile instanceof IFileVirtualFile) {
-                    return ((IFileVirtualFile) unitFile).getFile().getFullPath();
-                }
-                else {
-                    return new Path(unitFile.getPath());
-                }
-            }
+            return new Path(unit.getFullPath());
         }
         if (entity instanceof ICompilationUnit) {
             return ((ICompilationUnit) entity).getPath();
